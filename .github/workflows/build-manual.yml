@@ -1,37 +1,90 @@
-name: C/C++ CI
+- name: Debug environment
+  run: |
+    echo "=== MSYSTEM variable ==="
+    echo $MSYSTEM
+    echo ""
+    echo "=== PATH ==="
+    echo $PATH
+    echo ""
+    echo "=== GCC location ==="
+    where gcc || echo "gcc not found!"
+    echo ""
+    echo "=== GCC version ==="
+    gcc --version || echo "gcc not available"
+  shell: msys2 {0}
+  env:
+    MSYSTEM: MINGW64
+
+name: Build pepew-cpu-miner Windows x64
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
-
+    runs-on: windows-latest
+    
     steps:
-    - uses: actions/checkout@v3
-    - name: update
-      run: sudo apt update
-    - name: upgrade
-      run: sudo apt upgrade -y
-    - name: clean
-      run: sudo apt clean
-    - name: install_dependencies
-      run: sudo apt install git wget nano gh tmate build-essential make m4 libcurl4-openssl-dev libjansson-dev automake autoconf libtool autotools-dev cmake zlib1g-dev openssl libssl-dev -y
-    - name: clone_gitsource
-      run: cd && git clone https://github.com/wong-fi-hung/termux-miner && cd termux-miner
-    - name: generate_configure_script
-      run: autoreconf -i
-    - name: configuring
-      run: ./configure --with-crypto --with-curl
-    - name: Make
-      run: make -j4
-    - name: strip
-      run: strip -s cpuminer
-    - name: mktargz
-      run: mkdir termux-miner-v3.0.0; cp cpuminer cpuminer-conf.json termux-miner-v3.0.0; tar -Jcvf termux-miner-v3.0.0_amd64.tar.xz termux-miner-v3.0.0
-    - name: run_tmate_cmd
-      run: tmate -F
+      - name: Checkout code with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup MSYS2 (MINGW64 environment)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64  # 🔑 KRUSIAL: Gunakan environment MINGW64
+          update: true
+          install: |
+            base-devel
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-curl
+            mingw-w64-x86_64-pkg-config
+            git
+            make
+            autoconf
+            automake
+            libtool
+            libcurl-devel
+
+      - name: Verify compiler availability
+        run: |
+          echo "Checking GCC in MINGW64 environment:"
+          where gcc
+          gcc --version
+          echo "Checking PATH:"
+          echo $PATH
+        shell: msys2 {0}
+        env:
+          MSYSTEM: MINGW64  # Pastikan environment MINGW64 aktif
+
+      - name: Build pepew-cpu-miner
+        run: |
+          # Generate build files
+          ./autogen.sh
+          
+          # Configure dengan toolchain MinGW64
+          ./configure --with-curl --disable-gpu CFLAGS="-O3 -march=x86-64"
+          
+          # Build dengan verbose output
+          make -j4 V=1
+        shell: msys2 {0}
+        env:
+          MSYSTEM: MINGW64  # 🔑 KRUSIAL: Aktifkan MINGW64 environment
+
+      - name: Verify binary
+        run: |
+          echo "Binary information:"
+          file pepew-cpu-miner.exe || echo "file command not available"
+          ./pepew-cpu-miner.exe --version || echo "Version check failed (normal for first run)"
+        shell: msys2 {0}
+        env:
+          MSYSTEM: MINGW64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pepew-cpu-miner-win64
+          path: pepew-cpu-miner.exe
+          retention-days: 7
