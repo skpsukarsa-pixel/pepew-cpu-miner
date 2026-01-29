@@ -1,3 +1,12 @@
+name: Build pepew-cpu-miner Windows x64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
 - name: Debug environment
   run: |
     echo "=== MSYSTEM variable ==="
@@ -15,14 +24,6 @@
   env:
     MSYSTEM: MINGW64
 
-name: Build pepew-cpu-miner Windows x64
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: windows-latest
     
     steps:
       - name: Checkout code with submodules
