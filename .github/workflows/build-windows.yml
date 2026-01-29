@@ -1,0 +1,33 @@
+name: Build Windows x64
+
+on:
+  workflow_dispatch:  # Trigger manual via UI
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          choco install msys2 -y
+          C:\tools\msys64\usr\bin\bash -lc "pacman -Syu --noconfirm"
+          C:\tools\msys64\usr\bin\bash -lc "pacman -S --noconfirm mingw-w64-x86_64-toolchain mingw-w64-x86_64-curl git make autoconf automake libtool"
+
+      - name: Build miner
+        run: |
+          C:\tools\msys64\usr\bin\bash -lc "
+            cd /d/a/pepew-cpu-miner/pepew-cpu-miner
+            ./autogen.sh
+            ./configure --with-curl
+            make -j4
+          "
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pepew-cpu-miner-win64
+          path: pepew-cpu-miner/pepew-cpu-miner.exe
