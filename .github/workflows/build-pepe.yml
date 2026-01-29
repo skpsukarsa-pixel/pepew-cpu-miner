@@ -1,3 +1,20 @@
+- name: Debug environment
+  run: |
+    echo "=== MSYSTEM variable ==="
+    echo $MSYSTEM
+    echo ""
+    echo "=== PATH ==="
+    echo $PATH
+    echo ""
+    echo "=== GCC location ==="
+    where gcc || echo "gcc not found!"
+    echo ""
+    echo "=== GCC version ==="
+    gcc --version || echo "gcc not available"
+  shell: msys2 {0}
+  env:
+    MSYSTEM: MINGW64
+
 name: Build pepew-cpu-miner Windows x64
 
 on:
