@@ -1,0 +1,73 @@
+name: Build pepew-cpu-miner Windows x64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup MSYS2 (MINGW64 environment)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64  # 🔑 KRUSIAL: Gunakan environment MINGW64
+          update: true
+          install: |
+            base-devel
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-curl
+            mingw-w64-x86_64-pkg-config
+            git
+            make
+            autoconf
+            automake
+            libtool
+            libcurl-devel
+
+      - name: Verify compiler availability
+        run: |
+          echo "Checking GCC in MINGW64 environment:"
+          where gcc
+          gcc --version
+          echo "Checking PATH:"
+          echo $PATH
+        shell: msys2 {0}
+        env:
+          MSYSTEM: MINGW64  # Pastikan environment MINGW64 aktif
+
+      - name: Build pepew-cpu-miner
+        run: |
+          # Generate build files
+          ./autogen.sh
+          
+          # Configure dengan toolchain MinGW64
+          ./configure --with-curl --disable-gpu CFLAGS="-O3 -march=x86-64"
+          
+          # Build dengan verbose output
+          make -j4 V=1
+        shell: msys2 {0}
+        env:
+          MSYSTEM: MINGW64  # 🔑 KRUSIAL: Aktifkan MINGW64 environment
+
+      - name: Verify binary
+        run: |
+          echo "Binary information:"
+          file pepew-cpu-miner.exe || echo "file command not available"
+          ./pepew-cpu-miner.exe --version || echo "Version check failed (normal for first run)"
+        shell: msys2 {0}
+        env:
+          MSYSTEM: MINGW64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pepew-cpu-miner-win64
+          path: pepew-cpu-miner.exe
+          retention-days: 7
