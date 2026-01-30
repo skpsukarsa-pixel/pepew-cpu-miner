@@ -6,8 +6,24 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    
     steps:
+      - name: Debug environment
+        run: |
+          echo "=== MSYSTEM variable ==="
+          echo $MSYSTEM
+          echo ""
+          echo "=== PATH ==="
+          echo $PATH
+          echo ""
+          echo "=== GCC location ==="
+          where gcc || echo "gcc not found!"
+          echo ""
+          echo "=== GCC version ==="
+          gcc --version || echo "gcc not available"
+        shell: msys2 {0}
+        env:
+          MSYSTEM: MINGW64
+
       - name: Checkout code with submodules
         uses: actions/checkout@v4
         with:
@@ -17,7 +33,7 @@ jobs:
       - name: Setup MSYS2 (MINGW64 environment)
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64  # 🔑 KRUSIAL: Gunakan environment MINGW64
+          msystem: MINGW64
           update: true
           install: |
             base-devel
@@ -40,27 +56,27 @@ jobs:
           echo $PATH
         shell: msys2 {0}
         env:
-          MSYSTEM: MINGW64  # Pastikan environment MINGW64 aktif
+          MSYSTEM: MINGW64
 
       - name: Build pepew-cpu-miner
         run: |
-          # Generate build files
           ./autogen.sh
-          
-          # Configure dengan toolchain MinGW64
           ./configure --with-curl --disable-gpu CFLAGS="-O3 -march=x86-64"
-          
-          # Build dengan verbose output
           make -j4 V=1
         shell: msys2 {0}
         env:
-          MSYSTEM: MINGW64  # 🔑 KRUSIAL: Aktifkan MINGW64 environment
+          MSYSTEM: MINGW64
 
       - name: Verify binary
         run: |
           echo "Binary information:"
-          file pepew-cpu-miner.exe || echo "file command not available"
-          ./pepew-cpu-miner.exe --version || echo "Version check failed (normal for first run)"
+          if [ -f pepew-cpu-miner.exe ]; then
+            echo "✓ pepew-cpu-miner.exe found!"
+            ./pepew-cpu-miner.exe --version || echo "Version check skipped"
+          else
+            echo "✗ pepew-cpu-miner.exe NOT FOUND!"
+            exit 1
+          fi
         shell: msys2 {0}
         env:
           MSYSTEM: MINGW64
